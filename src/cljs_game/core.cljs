@@ -42,9 +42,9 @@
 
 (def pi (. js/Math -PI))
 
-(def ball1 {:pos [20 20] :vel [10 0] :radius 15})
+(def ball1 {:pos [20 20] :vel [5 0] :radius 15})
 
-(def ball2 {:pos [40 20] :vel [0 10] :radius 15})
+(def ball2 {:pos [40 20] :vel [0 5] :radius 15})
 
 (def starting-state {:balls [ball1 ball2]})
 
@@ -130,7 +130,7 @@
 
 (defn update-wall-hit-dir [{:keys [vel] :as ball} dir]
   (if (check-out-canvas (ball-side ball dir))
-    (assoc ball :vel (add-vector vel (-> dir (mul-vector vel) (scaler-mul-vector -2))))
+    (assoc ball :vel (add-vector vel (-> dir (mul-vector (let [[vx vy] vel] [(abs vx) (abs vy)])) (scaler-mul-vector -2))))
     ball))
 
 (def left-dir [-1 0])
