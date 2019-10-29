@@ -3,38 +3,10 @@
 
 (enable-console-print!)
 
-;(println "This text is printed from src/figwheel-1/core.cljs. Go ahead and edit it and see reloading in action.")
-;
-;;; define your app data so that it doesn't get over-written on reload
-;
-;(defonce app-state (atom {:text "Hello world!"}))
-;
-;
-;(defn hello-world []
-;  [:div
-;   [:h1 (:text @app-state)]
-;   [:h3 "Edit this and watch it change!"]])
-;
-;(reagent/render-component [hello-world]
-;                          (. js/document (getElementById "app")))
-;
-;(defn on-js-reload []
-;  ;; optionally touch your app-state to force rerendering depending on
-;  ;; your application
-;  ;; (swap! app-state update-in [:__figwheel_counter] inc)
-;)
-
-;(ns hello.cruel-world)
-
-(defn what-kind? []
-  "Brilliantly Cruel")
-
-(js/console.log (what-kind?))
-
 (def canvas (.getElementById js/document "myCanvas"))
 
 ;(def canvas-width 480)
-;(def canvas-height 480)
+;(def canvas-height 320)
 
 (def canvas-width (.. canvas -width))
 (def canvas-height (.. canvas -height))
@@ -53,7 +25,8 @@
 ;
 ;(def ball4 {:id 4 :pos [90 20] :vel [1 1] :radius 15 :mass (* 15 15)})
 
-(def starting-state {:balls [ball1 ball2 ball3]})
+(def starting-state {:balls [ball1 ball2 ball3]
+                     :stable? false})
 
 (defonce world-state (atom starting-state))
 
@@ -121,29 +94,19 @@
 (defn new-pos [op vel]
   (add-vector op vel))
 
-;(defn new-vel [ov damp]
-;  (let [dir (if (< ov 0) -1 1)
-;        d (* dir damp)
-;        abs-ov (* dir ov)]
-;    (if (< abs-ov 0.07) 0 (- ov d))))
-;
-;(defn temp-new-vel [ov damp]
-;  [(new-vel (first ov) damp) (new-vel (second ov) damp)])
-
 (defn ball-side [{:keys [pos radius]} dir]
-  (let [[px py] pos]
-    (add-vector pos (scaler-mul-vector dir radius))))
+  (add-vector pos (scaler-mul-vector dir radius)))
 
 (defn ball-left [ball] (ball-side ball [-1 0]))
 (defn ball-right [ball] (ball-side ball [1 0]))
 (defn ball-up [ball] (ball-side ball [0 1]))
 (defn ball-down [ball] (ball-side ball [0 -1]))
 
-(defn check-out-canvas [[posx posy]]
+(defn check-out-canvas? [[posx posy]]
   (not (and (> posx 0) (< posx canvas-width) (> posy 0) (< posy canvas-height))))
 
 (defn update-wall-hit-dir [{:keys [vel] :as ball} dir]
-  (if (check-out-canvas (ball-side ball dir))
+  (if (check-out-canvas? (ball-side ball dir))
     (assoc ball :vel (add-vector vel (-> dir (mul-vector (let [[vx vy] vel] [(abs vx) (abs vy)])) (scaler-mul-vector -2))))
     ball))
 
@@ -194,13 +157,13 @@
     [(f vx) (f vy)]))
 
 (defn update-ball-vecs [{:keys [vel] :as ball}]
-  (let [damp 1]
+  (let [damp 0.98]
     (-> ball
         (update :pos #(new-pos % vel))
         (update :vel #(new-vel % damp)))))
 
 (defn update-ball [{:keys [vel] :as ball} state]
-  (let [damp 1]
+  (let [damp 0.8]
     (-> ball
         (update-ball-collision (:balls state))
         (update :pos #(new-pos % vel))
@@ -214,40 +177,59 @@
         b (map update-wall-hit b)]
     (vec b)))
 
-(defn update-state [state]
-  (assoc state :balls (update-balls (:balls state))))
+(defn balls-stable? [balls]
+  (let [ball-stable? (fn [{:keys [vel]}]
+                       (= 0.0 (abs-vector vel)))]
+    (every? #(ball-stable? %) balls)))
+
+(defn update-state [{:keys [balls stable?] :as state}]
+  (if stable?
+    state
+    (let [updated-balls (update-balls balls)]
+      (-> state
+          (assoc :balls updated-balls)
+          (assoc :stable? (balls-stable? updated-balls))))))
 
 (reset! world-state starting-state)
 
+(def init-action {:pressed? false
+                  :start-pos [0 0]
+                  :end-pos [0 0]})
+
+(def action (atom init-action))
+
+(defn pos-in-ball? [pos ball]
+  (<= (abs-vector (sub-vector pos (:pos ball))) (:radius ball)))
+
+(defn apply-action-ball [action ball]
+  (let [{s :start-pos e :end-pos} action]
+    (if (pos-in-ball? s ball)
+      (assoc ball :vel (scaler-mul-vector (sub-vector s e) 0.05))
+      ball)))
+
+(defn apply-action-state [action state]
+  (js/console.log "applying action" (str action) (str state))
+  (let [balls (:balls state)
+        upd-balls (loop [updated-balls '() rest-balls balls]
+                    (if (first rest-balls)
+                      (recur
+                        (conj updated-balls (apply-action-ball action (first rest-balls)))
+                        (rest rest-balls))
+                      updated-balls))]
+    (assoc state :balls (vec upd-balls))))
+
+(set! (.. js/document -body -onmousedown) (fn [e]
+                                 (let [mouse-pos [(.. e -x) (.. e -y)]]
+                                   (js/console.log e)
+                                   (swap! action assoc :start-pos mouse-pos))))
+
+(set! (.. js/document -body -onmouseup) (fn [e]
+                                          (if (:stable? @world-state)
+                                            (let [mouse-pos [(.. e -x) (.. e -y)]]
+                                              (js/console.log e)
+                                              (swap! action assoc :end-pos mouse-pos)
+                                              (swap! world-state assoc :stable? false)
+                                              (swap! world-state #(apply-action-state @action %))))))
+
 (js/setInterval (fn []
                   (reset! world-state (update-state @world-state))) 15)
-
-;(def init-action {:pressed? false
-;                  :start-pos [0 0]
-;                  :end-pos [0 0]})
-;
-;(def action (atom init-action))
-;
-;(defn pos-in-ball? [pos ball]
-;  (<= (abs-vector (sub-vector pos (:pos ball))) (:radius ball)))
-;
-;(defn apply-action-ball [action ball]
-;  (let [{s :start-pos e :end-pos} action]
-;    (if (pos-in-ball? s ball)
-;      (assoc ball :vel (scaler-mul-vector (sub-vector s e) 0.01))
-;      ball)))
-;
-;;(defn apply-action-state [action state]
-;;  (let [balls (:balls state)]
-;;    (loop [updated-balls '() rest-balls balls]
-;;      (if (first rest-balls)
-;;        (recur )))))
-;
-;(defn update-action [mouse-pos]
-;  (if (not (:pressed? @action))
-;    (do
-;      (swap! action update :pressed? #(not %))
-;      (swap! action assoc :start-pos mouse-pos))
-;    (do
-;      (swap! action update :pressed? #(not %))
-;      (swap! action assoc :end-pos mouse-pos))))
