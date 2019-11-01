@@ -16,6 +16,7 @@
 (def ctx (.getContext canvas "2d"))
 
 (def pi (. js/Math -PI))
+(def damp 0.98)
 
 (def ball1 {:id 1 :pos [20 20] :vel [2 2] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
 
@@ -29,7 +30,7 @@
 
 (def ball6 {:id 6 :pos [200 20] :vel [1 1] :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
 
-(def special-ball {:id 7 :pos [200 200] :vel [1 1] :radius 10 :mass (* 10 10) :player 0 :special? 2 :color "#0000FF"})
+(def special-ball {:id 7 :pos [200 200] :vel [1 1] :radius 10 :mass (* 10 10) :player 0 :special? true :color "#0000FF"})
 
 (def starting-state {:balls [ball1 ball2 ball3 ball4 ball5 ball6 special-ball]
                      :stable? false
@@ -164,18 +165,17 @@
     [(f vx) (f vy)]))
 
 (defn update-ball-vecs [{:keys [vel] :as ball}]
-  (let [damp 0.98]
-    (-> ball
-        (update :pos #(new-pos % vel))
-        (update :vel #(new-vel % damp)))))
+  (-> ball
+      (update :pos #(new-pos % vel))
+      (update :vel #(new-vel % damp))))
 
-(defn update-ball [{:keys [vel] :as ball} state]
-  (let [damp 0.8]
-    (-> ball
-        (update-ball-collision (:balls state))
-        (update :pos #(new-pos % vel))
-        (update :vel #(new-vel % damp))
-        (update-wall-hit))))
+;(defn update-ball [{:keys [vel] :as ball} state]
+;  (let [damp 0.8]
+;    (-> ball
+;        (update-ball-collision (:balls state))
+;        (update :pos #(new-pos % vel))
+;        (update :vel #(new-vel % damp))
+;        (update-wall-hit))))
 
 (defn update-balls [balls]
   ;(js/console.log (str balls))
