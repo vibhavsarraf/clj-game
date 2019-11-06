@@ -1,5 +1,7 @@
 (ns app.room
-  (:import (java.util Date)))
+  (:import (java.util Date))
+  (:require [clojure.core.async :refer [go <!]]
+            [app.game-play :refer [play-game]]))
 
 (def rooms (atom {}))
 
@@ -12,7 +14,8 @@
                     :public public?
                     :created (Date.)
                     :num-players 0
-                    :channels []}]
+                    :channels []
+                    :running false}]
       (swap! rooms assoc room-id new-room)
       new-room)))
 
@@ -20,13 +23,19 @@
   (= (:num-players room) max-players))
 
 (defn start-room [room]
-  (println "Room Started" "room-id:" (:id room)))
+  (println "Room Started" "room-id:" (:id room))
+  (apply play-game (:channels room))
+  (println "Room Ended" "room-id:" (:id room)))
 
 (defn join-room [room-id channel]
   (let [room (get @rooms room-id)]
-    (if (and room (not (is-full? room)))
+    (if (and room (not (:running room)) (not (is-full? room)))
       (let [updated-room (-> room
                              (update :num-players inc)
                              (update :channels #(conj % channel)))]
         (swap! rooms assoc room-id updated-room)
-        (if (is-full? updated-room) (start-room updated-room))))))
+        (when (is-full? updated-room)
+          (swap! rooms assoc-in [room-id :running] true)
+          (go (start-room updated-room)
+              (swap! rooms assoc-in [room-id :running] false)))))))
+

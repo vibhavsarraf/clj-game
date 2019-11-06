@@ -35,8 +35,7 @@
 
 (def special-ball {:id 7 :pos [200 200] :vel [1 1] :radius 10 :mass (* 10 10) :player 0 :special? true :color "#0000FF"})
 
-(def starting-state {:balls []
-                     ;:balls [ball1 ball2 ball3 ball4 ball5 ball6 special-ball]
+(def starting-state {:balls [ball1 ball2 ball3 ball4 ball5 ball6 special-ball]
                      :stable? false
                      :player-turn 1})
 
@@ -213,7 +212,7 @@
 (defn apply-action-ball [action ball]
   (let [{s :start-pos e :end-pos} action]
     (if (pos-in-ball? s ball)
-      (assoc ball :vel (scaler-mul-vector (sub-vector s e) 0.05))
+      (assoc ball :vel (scaler-mul-vector (sub-vector s e) 0.1))
       ball)))
 
 (defn get-ball-moved [balls action]
@@ -284,7 +283,10 @@
 (def socket (atom nil))
 
 (defn join-room [id]
-  (reset! socket (new js/WebSocket (str "ws://localhost:3000/api/joinroom/" id)))
+  (let [ws (new js/WebSocket (str "ws://localhost:3000/api/joinroom/" id))]
+    (set! (.-onmessage ws) (fn [e]
+                             (js/console.log "GameServer: " (.-data e))))
+    (reset! socket ws))
   (set! (.-innerHTML (get-element "create-room")) "")
   (set! (.-innerHTML (get-element "message")) "Waiting for Opponent"))
 
