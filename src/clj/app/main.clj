@@ -7,4 +7,4 @@
 (defn -main [& args]
   (println "Server starting...")
   (server/run-server #'routes/app
-                     {:port 3449}))
+                     {:port 3000}))

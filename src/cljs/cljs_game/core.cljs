@@ -1,5 +1,8 @@
 (ns cljs-game.core
-    (:require [reagent.core :as reagent :refer [atom]]))
+  (:require-macros [cljs.core.async.macros :refer [go]])
+  (:require [reagent.core :as reagent :refer [atom]]
+            [cljs-http.client :as http]
+            [cljs.core.async :refer [<!]]))
 
 (enable-console-print!)
 
@@ -32,7 +35,8 @@
 
 (def special-ball {:id 7 :pos [200 200] :vel [1 1] :radius 10 :mass (* 10 10) :player 0 :special? true :color "#0000FF"})
 
-(def starting-state {:balls [ball1 ball2 ball3 ball4 ball5 ball6 special-ball]
+(def starting-state {:balls []
+                     ;:balls [ball1 ball2 ball3 ball4 ball5 ball6 special-ball]
                      :stable? false
                      :player-turn 1})
 
@@ -239,13 +243,13 @@
 
 (set! (.. js/document -body -onmousedown) (fn [e]
                                  (let [mouse-pos [(.. e -x) (.. e -y)]]
-                                   (js/console.log e)
+                                   ;(js/console.log e)
                                    (swap! action assoc :start-pos mouse-pos))))
 
 (set! (.. js/document -body -onmouseup) (fn [e]
                                           (if (:stable? @world-state)
                                             (let [mouse-pos [(.. e -x) (.. e -y)]]
-                                              (js/console.log e)
+                                              ;(js/console.log e)
                                               (swap! action assoc :end-pos mouse-pos)
                                               (swap! world-state #(apply-action-state @action %))))))
 
@@ -256,3 +260,45 @@
   (reset! world-state starting-state)
   (js/setInterval (fn []
                     (reset! world-state (update-state @world-state))) 15))
+
+
+;-----------------------------------------------------------------------------------
+;Create and Join room
+
+(defn get-element [id]
+  (.getElementById js/document id))
+
+(def create-form (.getElementById js/document "create-room-form"))
+(def create-room-id-input (.getElementById js/document "create-room-id"))
+
+(def join-form (.getElementById js/document "join-room-form"))
+(def join-room-id-input (.getElementById js/document "join-room-id"))
+
+(defn create-room-request [id public?]
+  (go (let [response (<! (http/post "http://localhost:3000/api/room"
+                                   {:with-credentials? false
+                                    :form-params {:id id :public true}}))]
+        (prn (:status response))
+        (prn (:body response)))))
+
+(def socket (atom nil))
+
+(defn join-room [id]
+  (reset! socket (new js/WebSocket (str "ws://localhost:3000/api/joinroom/" id)))
+  (set! (.-innerHTML (get-element "create-room")) "")
+  (set! (.-innerHTML (get-element "message")) "Waiting for Opponent"))
+
+(set! (.-onsubmit create-form) (fn [e]
+                          (.preventDefault e)
+                          (let [id (.-value create-room-id-input)]
+                            (go (<! (create-room-request id true))
+                                (join-room id))
+                            )))
+
+(set! (.-onsubmit join-form) (fn [e]
+                                 (.preventDefault e)
+                                 (let [id (.-value join-room-id-input)]
+                                   ;(go (<! (create-room-request id true)))
+                                   (join-room id)
+                                   )))
+
