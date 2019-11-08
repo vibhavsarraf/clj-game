@@ -1,4 +1,14 @@
 # Multiplayer game in clojure
 
-This project is currently work in progress.
-You can see it live [here](http://vibhavs.com/bar/cljgame.html).
+This is a two player game based on soccer stars.
+
+## Development
+Run figwheel
+
+    lein figwheel
+
+Run server
+
+    lein run
+    
+Go to http://localhost:3000

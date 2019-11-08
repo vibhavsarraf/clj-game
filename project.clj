@@ -68,4 +68,12 @@
                    :source-paths ["src/cljs" "dev" "src/clj" "script"]
                    ;; need to add the compliled assets to the :clean-targets
                    :clean-targets ^{:protect false} ["resources/public/js/compiled"
-                                                     :target-path]}})
+                                                     :target-path]}
+             :uberjar {:hooks [leiningen.cljsbuild]
+                       :aot :all
+                       :cljsbuild {:id "min"
+                                   :source-paths ["src/cljs"]
+                                   :compiler {:output-to "resources/public/js/compiled/cljs_game.js"
+                                              :main cljs-game.core
+                                              :optimizations :advanced
+                                              :pretty-print false}}}})

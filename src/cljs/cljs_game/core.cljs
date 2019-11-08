@@ -317,7 +317,7 @@
 
 (defn start-game [player sync-state]
   (swap! world-state assoc :my-player player :game-started? true)
-  (set-message! "Game Started"))
+  (set-message! (str "Game Started." (if (= player 1) "You are red." "You are green."))))
 
 (defn on-socket-receive [data]
   ;(println "Got message from server:" data)
