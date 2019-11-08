@@ -21,6 +21,8 @@
 (def pi (. js/Math -PI))
 (def damp 0.98)
 
+(defonce socket (atom nil))
+
 (def ball1 {:id 1 :pos [20 20] :vel [2 2] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
 
 (def ball2 {:id 2 :pos [90 20] :vel [0 0] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
@@ -229,15 +231,23 @@
 (defn change-player [cur-player]
   (if (= 1 cur-player) 2 1))
 
+(defn clj->json [data]
+  (-> data
+      clj->js
+      js/JSON.stringify))
+
 (defn apply-action-state [action state]
+  (println "Applying action" action)
   (let [{balls :balls player-turn :player-turn} state
         ind (get-ball-moved balls action)
         ball-moved (get balls ind)]
     (if (and (not= ind nil) (= player-turn (:player ball-moved)))
-      (-> state
-          (assoc-in [:balls ind] (apply-action-ball action ball-moved))
-          (assoc :stable? false)
-          (update :player-turn change-player))
+      (do
+        (when @socket (.send @socket (clj->json {:s (:start-pos action) :e (:end-pos action)})))
+        (-> state
+            (assoc-in [:balls ind] (apply-action-ball action ball-moved))
+            (assoc :stable? false)
+            (update :player-turn change-player)))
       state)))
 
 (set! (.. js/document -body -onmousedown) (fn [e]
@@ -280,13 +290,38 @@
         (prn (:status response))
         (prn (:body response)))))
 
-(def socket (atom nil))
+(def socket-data (atom nil))
+
+(defn conv-key-atoms [ma]
+  (if (= (type ma) cljs.core/PersistentArrayMap)
+    (reduce #(assoc %1 (-> %2 first keyword) (-> %2 second conv-key-atoms)) {} ma)
+    ma))
+
+(defn json->clj [json-str] (-> json-str
+                                     js/JSON.parse
+                                     js->clj
+                                     conv-key-atoms
+                                     ))
+
+(defn start-game [player sync-state])
+
+(defn on-socket-receive [data]
+  ;(println "Got message from server:" data)
+  (let [[msg json-str] (clojure.string/split data "#")
+        sync-data (json->clj json-str)]
+    (println "sync-data" sync-data "s" (get :s sync-data))
+    (case msg
+      "startgame" (start-game (get :player sync-data) (get :sync sync-data))
+      "action" (let [action {:start-pos (get sync-data :s) :end-pos (get sync-data :e)}]
+                 (swap! world-state #(apply-action-state action %)))
+      "sync" (reset! socket-data data))))
 
 (defn join-room [id]
   (let [ws (new js/WebSocket (str "ws://localhost:3000/api/joinroom/" id))]
+    (reset! socket ws)
     (set! (.-onmessage ws) (fn [e]
-                             (js/console.log "GameServer: " (.-data e))))
-    (reset! socket ws))
+                             (js/console.log "GameServer: " (.-data e))
+                             (on-socket-receive (.-data e)))))
   (set! (.-innerHTML (get-element "create-room")) "")
   (set! (.-innerHTML (get-element "message")) "Waiting for Opponent"))
 
