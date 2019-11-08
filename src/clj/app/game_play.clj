@@ -18,8 +18,8 @@
     (send! op-ch (->> data generate-string (str "action#")))))
 
 (defn play-game [ch1 ch2]
-  (send! ch1 "Hello from Game Server")
-  (send! ch2 "Hello from Game Server")
+  (send! ch1 (str "startgame#" (generate-string {:player 1})))
+  (send! ch2 (str "startgame#" (generate-string {:player 2})))
   (on-receive ch1 #(player-handler % ch1 ch2))
   (on-receive ch2 #(player-handler % ch2 ch1))
   (Thread/sleep 10000))

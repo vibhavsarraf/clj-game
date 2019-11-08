@@ -14,6 +14,12 @@
 (def canvas-width (.. canvas -width))
 (def canvas-height (.. canvas -height))
 
+(defn get-element [id]
+  (.getElementById js/document id))
+
+(defn set-message! [msg]
+  (set! (.-innerHTML (get-element "message")) msg))
+
 (def app (.getElementById js/document "app"))
 
 (def ctx (.getContext canvas "2d"))
@@ -39,7 +45,9 @@
 
 (def starting-state {:balls [ball1 ball2 ball3 ball4 ball5 ball6 special-ball]
                      :stable? false
-                     :player-turn 1})
+                     :player-turn 1
+                     :my-player 0
+                     :game-started? false})
 
 (defonce world-state (atom starting-state))
 
@@ -194,13 +202,19 @@
                        (= 0.0 (abs-vector vel)))]
     (every? #(ball-stable? %) balls)))
 
+(defn on-stable [{:keys [my-player player-turn game-started?] :as state}]
+  (when game-started?
+    (set-message! (if (= my-player player-turn) "Your Turn" "Opponent's Turn"))))
+
 (defn update-state [{:keys [balls stable?] :as state}]
   (if stable?
     state
-    (let [updated-balls (update-balls balls)]
+    (let [updated-balls (update-balls balls)
+          now-stable? (balls-stable? updated-balls)]
+      (when now-stable? (on-stable state))
       (-> state
           (assoc :balls updated-balls)
-          (assoc :stable? (balls-stable? updated-balls))))))
+          (assoc :stable? now-stable?)))))
 
 (def init-action {:pressed? false
                   :start-pos [0 0]
@@ -236,6 +250,8 @@
       clj->js
       js/JSON.stringify))
 
+(defn my-turn? [state] (= (:my-player state) (:player-turn state)))
+
 (defn apply-action-state [action state]
   (println "Applying action" action)
   (let [{balls :balls player-turn :player-turn} state
@@ -256,7 +272,7 @@
                                    (swap! action assoc :start-pos mouse-pos))))
 
 (set! (.. js/document -body -onmouseup) (fn [e]
-                                          (if (:stable? @world-state)
+                                          (if (and (:stable? @world-state) (my-turn? @world-state))
                                             (let [mouse-pos [(.. e -x) (.. e -y)]]
                                               ;(js/console.log e)
                                               (swap! action assoc :end-pos mouse-pos)
@@ -274,9 +290,6 @@
 ;-----------------------------------------------------------------------------------
 ;Create and Join room
 
-(defn get-element [id]
-  (.getElementById js/document id))
-
 (def create-form (.getElementById js/document "create-room-form"))
 (def create-room-id-input (.getElementById js/document "create-room-id"))
 
@@ -287,8 +300,7 @@
   (go (let [response (<! (http/post "http://localhost:3000/api/room"
                                    {:with-credentials? false
                                     :form-params {:id id :public true}}))]
-        (prn (:status response))
-        (prn (:body response)))))
+        response)))
 
 (def socket-data (atom nil))
 
@@ -303,15 +315,17 @@
                                      conv-key-atoms
                                      ))
 
-(defn start-game [player sync-state])
+(defn start-game [player sync-state]
+  (swap! world-state assoc :my-player player :game-started? true)
+  (set-message! "Game Started"))
 
 (defn on-socket-receive [data]
   ;(println "Got message from server:" data)
   (let [[msg json-str] (clojure.string/split data "#")
         sync-data (json->clj json-str)]
-    (println "sync-data" sync-data "s" (get :s sync-data))
+    (println "sync-data" sync-data)
     (case msg
-      "startgame" (start-game (get :player sync-data) (get :sync sync-data))
+      "startgame" (start-game (get sync-data :player) (get sync-data :sync))
       "action" (let [action {:start-pos (get sync-data :s) :end-pos (get sync-data :e)}]
                  (swap! world-state #(apply-action-state action %)))
       "sync" (reset! socket-data data))))
@@ -323,13 +337,18 @@
                              (js/console.log "GameServer: " (.-data e))
                              (on-socket-receive (.-data e)))))
   (set! (.-innerHTML (get-element "create-room")) "")
-  (set! (.-innerHTML (get-element "message")) "Waiting for Opponent"))
+  (set-message! "Waiting for Opponent"))
 
 (set! (.-onsubmit create-form) (fn [e]
                           (.preventDefault e)
                           (let [id (.-value create-room-id-input)]
-                            (go (<! (create-room-request id true))
-                                (join-room id))
+                            (go (let [response (<! (create-room-request id true))]
+                                  (if
+                                    (and
+                                      (= (:status response) 200)
+                                      (= (get-in response [:body :success]) true))
+                                    (join-room id)
+                                    (set-message! (get-in response [:body :reason])))))
                             )))
 
 (set! (.-onsubmit join-form) (fn [e]
@@ -338,4 +357,3 @@
                                    ;(go (<! (create-room-request id true)))
                                    (join-room id)
                                    )))
-
