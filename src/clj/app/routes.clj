@@ -9,16 +9,9 @@
 
 (defn join-room-handler [room-id req]
   (with-channel req channel
-                (on-close channel (fn [status]
-                                    (println "channel closed" "status: " status)))
                 (when (websocket? channel)
                   (println "WebSock channel" "room-id: " room-id)
-                  (join-room room-id channel)
-                  ;(println "HTTP channel")
-                  )
-                ;(on-receive channel (fn [data]
-                ;                      (send! channel data)))
-                ))
+                  (join-room room-id channel))))
 
 (defn with-json [resp]
   (rr/content-type resp "application/json"))

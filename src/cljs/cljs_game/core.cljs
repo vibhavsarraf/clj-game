@@ -2,7 +2,8 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [reagent.core :as reagent :refer [atom]]
             [cljs-http.client :as http]
-            [cljs.core.async :refer [<!]]))
+            [cljs.core.async :refer [<!]]
+            [util.vector :refer :all]))
 
 (enable-console-print!)
 
@@ -65,14 +66,8 @@
   (.clearRect ctx 0 0 (. canvas -width) (. canvas -height))
   (doall (map (partial draw-ball ctx) (:balls state))))
 
-;(draw-ball ctx @world-state)
-
 (add-watch world-state :on-change (fn [_ _ _ n]
                                     (draw ctx n)))
-
-;(draw ctx @world-state)
-
-(js/console.log "drawing world-state")
 
 (defn abs [n]
   (if (< n 0) (* -1 n) n))
@@ -80,37 +75,6 @@
 (defn sq [n] (* n n))
 
 (defn sqrt [n] (Math/sqrt n))
-
-(defn add-vector [v1 v2]
-  (let [[v1x v1y] v1
-        [v2x v2y] v2]
-    [(+ v1x v2x) (+ v1y v2y)]))
-
-(defn sub-vector [v1 v2]
-  (let [[v1x v1y] v1
-        [v2x v2y] v2]
-    [(- v1x v2x) (- v1y v2y)]))
-
-(defn dot-vector [v1 v2]
-  (let [[v1x v1y] v1
-        [v2x v2y] v2]
-    (+ (* v1x v2x) (* v1y v2y))))
-
-(defn abs-vector [v]
-  (let [vx (first v) vy (second v)]
-    (sqrt (+ (sq vx) (sq vy)))))
-
-(defn mul-vector [[v1x v1y] [v2x v2y]]
-  [(* v1x v2x) (* v1y v2y)])
-
-(defn scaler-mul-vector [[vx vy] a]
-  [(* a vx) (* a vy)])
-
-(defn neg-vector [v]
-  [(* -1 (first v)) (* -1 (second v))])
-
-(defn dis-vector [v1 v2]
-  (abs-vector (add-vector v1 (neg-vector v2))))
 
 (defn new-pos [op vel]
   (add-vector op vel))
@@ -128,7 +92,9 @@
 
 (defn update-wall-hit-dir [{:keys [vel] :as ball} dir]
   (if (check-out-canvas? (ball-side ball dir))
-    (assoc ball :vel (add-vector vel (-> dir (mul-vector (let [[vx vy] vel] [(abs vx) (abs vy)])) (scaler-mul-vector -2))))
+    (assoc ball :vel (add-vector vel (-> dir
+                                         (mul-vector (let [[vx vy] vel] [(abs vx) (abs vy)]))
+                                         (scaler-mul-vector -2))))
     ball))
 
 (def left-dir [-1 0])
@@ -354,6 +320,5 @@
 (set! (.-onsubmit join-form) (fn [e]
                                  (.preventDefault e)
                                  (let [id (.-value join-room-id-input)]
-                                   ;(go (<! (create-room-request id true)))
                                    (join-room id)
                                    )))

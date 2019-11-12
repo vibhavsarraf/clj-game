@@ -1,6 +1,7 @@
 (ns app.game-play
   (:require [org.httpkit.server :refer :all]
-            [cheshire.core :refer :all])
+            [cheshire.core :refer :all]
+            [clojure.core.async :refer [<!! >!! alt!! go chan]])
   (:import (clojure.lang PersistentArrayMap)))
 
 (defn conv-key-atoms [ma]
@@ -20,6 +21,19 @@
 (defn play-game [ch1 ch2]
   (send! ch1 (str "startgame#" (generate-string {:player 1})))
   (send! ch2 (str "startgame#" (generate-string {:player 2})))
-  (on-receive ch1 #(player-handler % ch1 ch2))
-  (on-receive ch2 #(player-handler % ch2 ch1))
-  (Thread/sleep 10000))
+  (let [p1-ch (chan 1)
+        p2-ch (chan 1)
+        close-ch (chan 1)]
+    (on-receive ch1 #(>!! p1-ch %))
+    (on-receive ch2 #(>!! p2-ch %))
+    (on-close ch1 #(>!! close-ch %))
+    (on-close ch2 #(>!! close-ch %))
+    (loop []
+      (alt!!
+        p1-ch ([v] (do
+                     (player-handler v ch1 ch2)
+                     (recur)))
+        p2-ch ([v] (do
+                     (player-handler v ch2 ch1)
+                     (recur)))
+        close-ch ()))))
