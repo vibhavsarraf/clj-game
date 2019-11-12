@@ -6,5 +6,6 @@
 
 (defn -main [& args]
   (println "Server starting...")
+  (app.room/room-destroyer)
   (server/run-server #'routes/app
                      {:port 3000}))
