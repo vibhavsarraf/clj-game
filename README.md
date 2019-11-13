@@ -1,6 +1,6 @@
 # Multiplayer game in clojure
 
-This is a two player game based on soccer stars.
+This is a two player game based on soccer stars. Not yet completed. Check it out [here](http://vibhavs.com:3000)
 
 ## Development
 Run figwheel
