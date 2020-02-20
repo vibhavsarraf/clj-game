@@ -42,11 +42,10 @@
 (defn room-destroyer []
   (go
     (loop []
-        (doseq [[room-id {:keys [running created]}] @rooms]
-          (when (and
-                  (not running)
-                  (>
-                    (- (.getTime (java.util.Date.)) (.getTime created))
-                    30000))
+      (doseq [[room-id {:keys [running created]}] @rooms]
+        (when (and
+                (not running)
+                (> (- (.getTime (java.util.Date.)) (.getTime created)) 30000))
             (swap! rooms dissoc room-id)))
-        (recur))))
+      (Thread/sleep 10000)
+      (recur))))
