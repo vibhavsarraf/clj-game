@@ -49,4 +49,5 @@
                     (- (.getTime (java.util.Date.)) (.getTime created))
                     30000))
             (swap! rooms dissoc room-id)))
+        (Thread/sleep 10000)
         (recur))))

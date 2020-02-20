@@ -5,3 +5,11 @@
 /*    margin: auto;*/
 /*    display: block;*/
 /*}*/
+
+body {
+    margin: 0%;
+}
+
+#myCanvas {
+    border:2px solid black;
+}
