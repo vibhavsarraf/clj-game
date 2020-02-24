@@ -21,11 +21,11 @@
 
 (defn api-routes []
   (routes
-    (GET "/echo" req (str req "\r\nHello"))
+    (GET "/echo" req (str req "\r\nHelloo"))
     (GET "/joinroom/:room-id" [room-id :as req] (join-room-handler room-id req))
     (POST "/room" [id public]
       (let [public? (java.lang.Boolean. public)]
-        (println (str "POST " "/room" id public?))
+        (println (str "POST " "/room " id public?))
         (if (add-new-room id public?)
           (convert-json {:success true})
           (convert-json {:success false :reason "Room Already Exists"}))))))

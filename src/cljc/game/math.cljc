@@ -1,5 +1,4 @@
-(ns game.math
-  (:require [clojure.core]))
+(ns game.math)
 
 (defn abs [n]
   (if (< n 0) (- n) n))

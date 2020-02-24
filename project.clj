@@ -47,7 +47,7 @@
                            ;; https://github.com/binaryage/cljs-devtools
                            :preloads [devtools.preload]}}
                {:id "min"
-                :source-paths ["src/cljs"]
+                :source-paths ["src/cljs" "src/cljc"]
                 :compiler {:output-to "resources/public/js/compiled/cljs_game.js"
                            :main cljs-game.core
                            :optimizations :advanced
@@ -66,14 +66,14 @@
                                   [ring/ring-mock "0.3.2"]
                                   [cljs-http "0.1.46"]]
                    ;; need to add dev source path here to get user.clj loaded
-                   :source-paths ["src/cljs" "dev" "src/clj" "script"]
+                   :source-paths ["src/cljs" "dev" "src/clj" "script" "src/cljc"]
                    ;; need to add the compliled assets to the :clean-targets
                    :clean-targets ^{:protect false} ["resources/public/js/compiled"
                                                      :target-path]}
              :uberjar {:hooks [leiningen.cljsbuild]
                        :aot :all
                        :cljsbuild {:id "min"
-                                   :source-paths ["src/cljs"]
+                                   :source-paths ["src/cljs" "src/cljc"]
                                    :compiler {:output-to "resources/public/js/compiled/cljs_game.js"
                                               :main cljs-game.core
                                               :optimizations :advanced
