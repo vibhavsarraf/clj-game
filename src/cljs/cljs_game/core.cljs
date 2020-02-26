@@ -3,7 +3,8 @@
   (:require [reagent.core :as reagent :refer [atom]]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
-            [game.soccer :as soccer]))
+            [game.soccer :as soccer]
+            [game.math :as math]))
 
 (enable-console-print!)
 
@@ -37,17 +38,18 @@
 
 (.clearRect ctx 0 0 canvas-width canvas-height)
 
-(def field {:width canvas-width
-            :height canvas-height
-            :goal-color "pink"
-            :background "grey"})
+(defn fill-rect [a b c d]
+  (.fillRect ctx a b c d))
+
+(def field (merge soccer/field {:goal-color "pink"
+                                :background "grey"}))
 
 (defn draw-field [ctx field]
   (set! (.-fillStyle ctx) (:background field))
-  (.fillRect ctx 0 0 canvas-width canvas-height)
+  (.fillRect ctx 0 0 (:width field) (:height field))
   (set! (.-fillStyle ctx) (:goal-color field))
-  (.fillRect ctx 0 120 30 80)
-  (.fillRect ctx 450 120 30 80))
+  (apply fill-rect (:left-goal field))
+  (apply fill-rect (:right-goal field)))
 
 (defn draw-ball [ctx {:keys [pos radius color]}]
   ;(js/console.log "draw-ball called")
@@ -64,14 +66,15 @@
   (draw-field ctx field)
   (doall (map (partial draw-ball ctx) (:balls state))))
 
-(draw ctx soccer/starting-state)
+(draw ctx @world-state)
 
 (add-watch world-state :on-change (fn [_ _ _ n]
                                     (draw ctx n)))
 
 (defn on-stable-msg [{:keys [my-player player-turn game-started?] :as state}]
   (when game-started?
-    (set-message! (if (= my-player player-turn) "Your Turn" "Opponent's Turn"))))
+    (set-message! (str (if (= my-player player-turn) "Your Turn. " "Opponent's Turn. ")
+                       (if (= my-player 1) "You are red." "You are green.")))))
 
 (def init-action {:pressed? false
                   :start-pos [0 0]
@@ -84,24 +87,22 @@
       clj->js
       js/JSON.stringify))
 
-(set! (.. js/document -body -onmousedown) (fn [e]
-                                 (let [mouse-pos [(.. e -x) (.. e -y)]]
-                                   (swap! action assoc :start-pos mouse-pos))))
-
-(set! (.. js/document -body -onmouseup) (fn [e]
-                                          (println "Got mouse up event")
+(set! (.. js/document -body -onclick) (fn [e]
+                                        (println "Got click")
+                                        (println @action)
+                                        (if (:pressed? @action)
                                           (when (soccer/my-turn? @world-state)
-                                            ;(let [{stable? :stable? game-started? :game-started?} @world-state])
-                                            ;(if) (and
-                                            ;       (:stable? @world-state)
-                                            ;       (or (not game-started?) (my-turn? @world-state)))
                                             (let [mouse-pos [(.. e -x) (.. e -y)]
                                                   on-action-fn (fn [action]
                                                                  (println "Sending action: " action)
                                                                  (when @socket (.send @socket (clj->json action))))]
-                                              ;(js/console.log e)
-                                              (swap! action assoc :end-pos mouse-pos)
-                                              (swap! world-state #(soccer/apply-action-state @action % on-action-fn))))))
+                                              (swap! action assoc :end-pos mouse-pos :pressed? false)
+                                              (swap! world-state #(soccer/apply-action-state @action % on-action-fn))))
+                                          (let [mouse-pos [(.. e -x) (.. e -y)]
+                                                is-pos-in-ball? (fn [{:keys [pos radius]}]
+                                                                  (< (math/dis-vector mouse-pos pos) radius))]
+                                            (when (some is-pos-in-ball? (:balls @world-state))
+                                              (swap! action assoc :start-pos mouse-pos :pressed? true))))))
 
 (defonce screen-loaded? (atom false))
 

@@ -3,9 +3,9 @@
   (:require [clojure.core.async :refer [go <!]]
             [app.game-play :refer [play-game]]))
 
-(def rooms (atom {}))
-
 (def max-players 2)
+
+(def rooms (atom {}))
 
 (defn add-new-room [room-id public?]
   (if (get @rooms room-id)
