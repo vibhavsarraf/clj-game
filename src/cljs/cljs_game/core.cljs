@@ -145,10 +145,9 @@
     :else ma))
 
 (defn json->clj [json-str] (-> json-str
-                                     js/JSON.parse
-                                     js->clj
-                                     conv-key-atoms
-                                     ))
+                               js/JSON.parse
+                               js->clj
+                               conv-key-atoms))
 
 (defn start-game [player sync-state]
   (reset! world-state soccer/starting-state)
