@@ -6,14 +6,14 @@
             :left-goal [0 120 30 80]
             :right-goal [450 120 30 80]})
 
-(def ball1 {:id 1 :pos [80 60] :vel [2 2] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
-(def ball2 {:id 2 :pos [110 160] :vel [0 0] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
-(def ball3 {:id 3 :pos [80 260] :vel [0 0] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
-(def ball4 {:id 4 :pos [400 60] :vel [1 1] :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
-(def ball5 {:id 5 :pos [370 160] :vel [1 1] :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
-(def ball6 {:id 6 :pos [400 260] :vel [1 1] :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
+(def ball1 {:id 1 :pos '(80 60) :vel '(2 2) :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
+(def ball2 {:id 2 :pos '(110 160) :vel '(0 0) :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
+(def ball3 {:id 3 :pos '(80 260) :vel '(0 0) :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
+(def ball4 {:id 4 :pos '(400 60) :vel '(1 1) :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
+(def ball5 {:id 5 :pos '(370 160) :vel '(1 1) :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
+(def ball6 {:id 6 :pos '(400 260) :vel '(1 1) :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
 (def king
-  {:id 7 :pos [240 160] :vel [0 0] :radius 10 :mass (* 10 10) :player 0 :special? true :color "#0000FF"})
+  {:id 7 :pos '(240 160) :vel '(0 0) :radius 10 :mass (* 10 10) :player 0 :special? true :color "#0000FF"})
 
 (def starting-state {:balls [ball1 ball2 ball3 ball4 ball5 ball6 king]
                      :stable? false
@@ -35,7 +35,7 @@
 (defn update-wall-hit-dir [{:keys [vel] :as ball} dir]
   (if (check-out-field? (ball-side ball dir))
     (assoc ball :vel (math/add-vector vel (-> dir
-                                              (math/mul-vector (let [[vx vy] vel] [(math/abs vx) (math/abs vy)]))
+                                              (math/mul-vector (vec (map math/abs vel)))
                                               (math/scale-vector -2))))
     ball))
 
@@ -58,8 +58,7 @@
             xdif (math/sub-vector p1 p2)
             temp1 (/
                     (math/dot-vector (math/sub-vector v1 v2) xdif)
-                    (let [a (math/abs-vector xdif)]
-                      (math/sq a)))
+                    (math/sq (math/abs-vector xdif)))
             temp2 (/ (* 2 m2) (+ m1 m2))
             tempv (math/scale-vector xdif (* temp1 temp2))]
         (assoc b1 :vel (math/sub-vector v1 tempv))))
@@ -84,7 +83,7 @@
       (update :vel #(new-vel % damp))))
 
 (defn update-balls [balls]
-  (let [b (doall (map update-ball-vecs balls))
+  (let [b (map update-ball-vecs balls)
         b (map #(update-ball-collision % b) b)
         b (map update-wall-hit b)]
     (vec b)))
@@ -116,8 +115,8 @@
       (is-king-in-goal state (:right-goal field)) (update-score-fn :player-1-score)
       :else state)))
 
-(defn update-state [{:keys [balls stable?] :as state}]
-  (if stable?
+(defn update-state [state]
+  (if (:stable? state)
     state
     (let [updated-state (-> state
                             (update :balls update-balls)

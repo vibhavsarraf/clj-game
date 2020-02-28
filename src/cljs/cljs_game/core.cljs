@@ -52,7 +52,6 @@
   (apply fill-rect (:right-goal field)))
 
 (defn draw-ball [ctx {:keys [pos radius color]}]
-  ;(js/console.log "draw-ball called")
   (let [[posx posy] pos]
     (.beginPath ctx)
     (.arc ctx posx posy radius 0 (* 2 pi))
@@ -61,7 +60,6 @@
     (.closePath ctx)))
 
 (defn draw [ctx state]
-  ;(js/console.log "draw called" (str state))
   (.clearRect ctx 0 0 (. canvas -width) (. canvas -height))
   (draw-field ctx field)
   (doall (map (partial draw-ball ctx) (:balls state))))
@@ -133,10 +131,9 @@
 (def join-room-id-input (.getElementById js/document "join-room-id"))
 
 (defn create-room-request [id public?]
-  (go (let [response (<! (http/post (str href "api/room")
-                                    {:with-credentials? false
-                                    :form-params {:id id :public true}}))]
-        response)))
+  (go (<! (http/post (str href "api/room")
+                     {:with-credentials? false
+                      :form-params {:id id :public true}}))))
 
 (defn conv-key-atoms [ma]
   (cond

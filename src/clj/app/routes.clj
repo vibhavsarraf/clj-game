@@ -21,7 +21,6 @@
 
 (defn api-routes []
   (routes
-    (GET "/echo" req (str req "\r\nHelloo"))
     (GET "/joinroom/:room-id" [room-id :as req] (join-room-handler room-id req))
     (POST "/room" [id public]
       (let [public? (java.lang.Boolean. public)]
