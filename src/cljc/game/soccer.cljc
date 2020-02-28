@@ -6,14 +6,14 @@
             :left-goal [0 120 30 80]
             :right-goal [450 120 30 80]})
 
-(def ball1 {:id 1 :pos '(80 60) :vel '(2 2) :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
-(def ball2 {:id 2 :pos '(110 160) :vel '(0 0) :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
-(def ball3 {:id 3 :pos '(80 260) :vel '(0 0) :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
-(def ball4 {:id 4 :pos '(400 60) :vel '(1 1) :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
-(def ball5 {:id 5 :pos '(370 160) :vel '(1 1) :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
-(def ball6 {:id 6 :pos '(400 260) :vel '(1 1) :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
+(def ball1 {:id 1 :pos [80 60] :vel [2 2] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
+(def ball2 {:id 2 :pos [110 160] :vel [0 0] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
+(def ball3 {:id 3 :pos [80 260] :vel [0 0] :radius 15 :mass (* 15 15) :player 1 :color "#FF0000"})
+(def ball4 {:id 4 :pos [400 60] :vel [1 1] :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
+(def ball5 {:id 5 :pos [370 160] :vel [1 1] :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
+(def ball6 {:id 6 :pos [400 260] :vel [1 1] :radius 15 :mass (* 15 15) :player 2 :color "#00FF00"})
 (def king
-  {:id 7 :pos '(240 160) :vel '(0 0) :radius 10 :mass (* 10 10) :player 0 :special? true :color "#0000FF"})
+  {:id 7 :pos [240 160] :vel [0 0] :radius 10 :mass (* 10 10) :player 0 :special? true :color "#0000FF"})
 
 (def starting-state {:balls [ball1 ball2 ball3 ball4 ball5 ball6 king]
                      :stable? false
