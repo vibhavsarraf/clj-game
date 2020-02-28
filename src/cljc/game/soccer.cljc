@@ -35,7 +35,7 @@
 (defn update-wall-hit-dir [{:keys [vel] :as ball} dir]
   (if (check-out-field? (ball-side ball dir))
     (assoc ball :vel (math/add-vector vel (-> dir
-                                              (math/mul-vector (vec (map math/abs vel)))
+                                              (math/mul-vector (map math/abs vel))
                                               (math/scale-vector -2))))
     ball))
 
@@ -75,7 +75,7 @@
 
 (defn new-vel [[vx vy] damp]
   (let [f (fn [a] (if (> (math/abs a) 0.01) (* a damp) 0))]
-    [(f vx) (f vy)]))
+    (list (f vx) (f vy))))
 
 (defn update-ball-vecs [{:keys [vel] :as ball}]
   (-> ball
